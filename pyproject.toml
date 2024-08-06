@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "drf"
+version = "0.1.0"
+description = ""
+authors = ["Sergius Art <xcxserj@mail.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+psycopg2-binary = "^2.9.9"
+pillow = "^10.1.0"
+ipython = "^8.17.2"
+python-dotenv = "^1.0.0"
+djangorestframework = "^3.14.0"
+django = "^4.2.7"
+django-filter = "^23.3"
+djangorestframework-simplejwt = "^5.3.0"
+coverage = "^7.3.2"
+coreapi = "^2.3.3"
+drf-yasg = "^1.21.7"
+django-cors-headers = "^4.3.1"
+stripe = "^7.6.0"
+celery = "^5.3.6"
+redis = "^5.0.1"
+django-celery-beat = "^2.5.0"
+setuptools = "^69.0.3"
+psycopg = {extras = ["binary"], version = "^3.1.18"}
+gunicorn = "^21.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
