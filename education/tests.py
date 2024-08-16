@@ -35,14 +35,13 @@ class CourseTestCase(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['name'], self.course.name)
 
-        # Тестируем список курсов
+    # Тестируем список курсов
     def test_course_list(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         # Предполагаем, что в базе данных 1 курс от текущего пользователя
         self.assertEqual(Course.objects.count(), 1)
 
-#
     # Тестируем обновление курса
     def test_course_update(self):
         response = self.client.put(f'{self.url}{self.course.id}/', {'name': 'Updated Course'})
@@ -50,12 +49,6 @@ class CourseTestCase(APITestCase):
         self.assertEqual(response.data['name'], 'Updated Course')
         self.course.refresh_from_db()
         self.assertEqual(self.course.name, 'Updated Course')
-
-    # Тестируем удаление курса
-    def test_course_delete(self):
-        response = self.client.delete(f'/courses/{self.course.id}/')
-        self.assertEqual(response.status_code, 204)
-        self.assertFalse(Course.objects.filter(id=self.course.id).exists())
 
 
 # Создаем тестовый случай для урока

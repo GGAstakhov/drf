@@ -11,28 +11,34 @@ class LessonSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = ('course', 'title', 'description', 'preview', 'video_url')
 
-        def validate_description(self, value):
-            # Проверяем, что описание не содержит ссылок на сторонние ресурсы кроме youtube.com
-            pattern = r'^(https?\:\/\/)?(www\.youtube\.com|youtu\.?be)\/.+$'
-            urls = re.findall(pattern, value)
-            for url in urls:
-                if 'youtube.com' not in url:
-                    raise serializers.ValidationError("Ссылки на сторонние ресурсы не разрешены.")
-
-            return value
+    def validate_video_url(self, value):
+        """
+        Запрещаем ссылки, ведущие на YouTube.
+        """
+        youtube_pattern = r'^(https?\:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$'
+        if re.match(youtube_pattern, value):
+            raise serializers.ValidationError("Ссылки на YouTube запрещены.")
+        return value
 
 
 # Сериализатор курсов
 class CourseSerializer(serializers.ModelSerializer):
     lesson_count = serializers.SerializerMethodField()
     lessons = LessonSerializer(many=True, source='lesson_set', required=False)
+    is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
-        fields = ('name', 'description', 'image', 'lesson_count', 'lessons')
+        fields = ('name', 'description', 'image', 'lesson_count', 'lessons', 'is_subscribed')
 
     def get_lesson_count(self, obj):
         return obj.lesson_set.count()
+
+    def get_is_subscribed(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Subscription.objects.filter(user=user, course=obj).exists()
+        return False
 
 
 # Сериализатор платежей

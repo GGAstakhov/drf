@@ -1,10 +1,15 @@
 from rest_framework import viewsets, generics, filters
+from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView
+
 from education import serializers
 from education.models import Course, Lesson, Payment
-from education.serializers import PaymentSerializer, SubscriptionSerializer, PaymentCreateSerializer
+from education.serializers import PaymentSerializer, SubscriptionSerializer, PaymentCreateSerializer, CourseSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from users.models import ModeratorPermissions, IsOwner, Subscription
 from education.tasks import notify_subscribers
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 
 # ViewSet для модели Course
@@ -32,7 +37,7 @@ class CourseViewSet(viewsets.ModelViewSet):
     - DELETE (/:id): Удаление курса.
     """
     serializer_class = serializers.CourseSerializer
-    permission_classes = [ModeratorPermissions | IsOwner]
+    permission_classes = [IsAuthenticated, ModeratorPermissions | IsOwner]  # Добавляем IsAuthenticated
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -47,7 +52,12 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Course.objects.filter(owner=user).order_by('id')
+
+        # Проверяем, что пользователь аутентифицирован
+        if user.is_authenticated:
+            return Course.objects.filter(owner=user).order_by('id')
+        else:
+            return Course.objects.none()  # Возвращаем пустой QuerySet для анонимных пользователей
 
 
 # API для создания урока
@@ -195,8 +205,74 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         notify_subscribers.delay(course.id)
 
 
+class SubscriptionDestroyAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Получаем id подписки из URL
+        subscription_id = kwargs.get('pk')
+
+        # Получаем объект подписки, либо возвращаем 404, если не найдено
+        subscription = get_object_or_404(Subscription, id=subscription_id, user=request.user)
+
+        # Удаляем подписку
+        subscription.delete()
+
+        # Возвращаем сообщение об успешном удалении
+        return Response({"message": "Подписка удалена"}, status=204)
+
+
+class SubscriptionCreateAPIView(generics.CreateAPIView):
+    """
+    API для создания подписки.
+
+    Разрешения:
+    - Создание доступно только аутентифицированным пользователям.
+
+    Поля:
+    - serializer_class: Класс сериализатора для подписки.
+    - permission_classes: Классы разрешений для доступа к API.
+
+    Запросы:
+    - POST: Создание новой подписки.
+    """
+    serializer_class = SubscriptionSerializer
+    permission_classes = [ModeratorPermissions | IsOwner]
+
+    def perform_create(self, serializer):
+        # Сохранение подписки с текущим пользователем как владельцем
+        serializer.save(user=self.request.user)
+
+
 class PaymentCreateAPIView(generics.CreateAPIView):
     serializer_class = PaymentCreateSerializer
 
     def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class CourseDestroyAPIView(generics.DestroyAPIView):
+    queryset = Course.objects.all()
+    permission_classes = [~ModeratorPermissions | IsOwner]
+
+
+class CourseCreateAPIView(generics.CreateAPIView):
+    """
+    API для создания подписки.
+
+    Разрешения:
+    - Создание доступно только аутентифицированным пользователям.
+
+    Поля:
+    - serializer_class: Класс сериализатора для подписки.
+    - permission_classes: Классы разрешений для доступа к API.
+
+    Запросы:
+    - POST: Создание новой подписки.
+    """
+    serializer_class = CourseSerializer
+    permission_classes = [ModeratorPermissions | IsOwner]
+
+    def perform_create(self, serializer):
+        # Сохранение подписки с текущим пользователем как владельцем
         serializer.save(user=self.request.user)

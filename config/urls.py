@@ -46,7 +46,7 @@ urlpatterns = [
     re_path(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 
     path('admin/', admin.site.urls),
-    path('education/', include('education.urls', namespace='education')),
+    path('', include('education.urls', namespace='education')),
     path('users/', include('users.urls', namespace='users')),
     path('', home_view, name='home'),
 ]
